@@ -1,0 +1,30 @@
+# Publishes the release in releases/<version>/ (the version in releases/LATEST)
+# whenever those files change: every .zip and .apk in the folder becomes a
+# download, NOTES.md becomes the release text.
+name: Publish release
+
+on:
+  push:
+    branches: [main]
+    paths: ["releases/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V=$(tr -d '\r\n ' < releases/LATEST)
+          D="releases/$V"
+          ls "$D"/*.zip "$D"/*.apk
+          gh release delete "v$V" --yes --cleanup-tag -R "$GITHUB_REPOSITORY" || true
+          gh release create "v$V" "$D"/*.zip "$D"/*.apk -R "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "AcHandCam $V" --notes-file "$D/NOTES.md" --latest
